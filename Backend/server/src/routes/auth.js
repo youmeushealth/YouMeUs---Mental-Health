@@ -73,7 +73,6 @@ router.post("/login", async (req, res) => {
 
     // Find user and compare password
     const user = await User.findOne({ email }).select("+password");
-    console.log("User found during login:", user);
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({
         status: "error",
