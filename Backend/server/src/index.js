@@ -1,10 +1,10 @@
+import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
-import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import blogRoutes from "./routes/blogs.js";
 import commentRoutes from "./routes/comments.js";
@@ -12,7 +12,6 @@ import googleAuthRoutes from "./routes/googleAuth.js";
 import seoRoutes from "./routes/seo.js";
 import { protect } from "./middleware/auth.js";
 import mediaRoutes from "./routes/mediaRoutes.js";
-dotenv.config();
 
 const app = express();
 
