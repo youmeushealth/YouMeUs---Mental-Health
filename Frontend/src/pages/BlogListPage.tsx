@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "../lib/supabase";
 import { type BlogPost } from "../types";
 import { Calendar, Eye, User } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 const PAGE_SIZE = 10;
 
 export default function BlogListPage() {
+  const { token } = useAuth();
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     fetchBlogs(page);
@@ -19,33 +21,36 @@ export default function BlogListPage() {
   const fetchBlogs = async (pageNumber: number) => {
     setLoading(true);
     try {
-      const from = (pageNumber - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
+      const response = await fetch(
+        `${BACKEND_URL}/api/blogs?page=${pageNumber}&limit=${PAGE_SIZE}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        }
+      );
+      const data = await response.json();
 
-      const { data, error, count } = await supabase
-        .from("blogs")
-        .select("*", { count: "exact" })
-        .eq("status", "published")
-        .order("view_count", { ascending: false })
-        .range(from, to);
+      if (data.status === "success") {
+        const items: BlogPost[] = data.data.blogs.map((item: any) => ({
+          id: item._id,
+          title: item.title,
+          slug: item.slug,
+          blocks: item.blocks,
+          status: item.status,
+          publishedAt: item.publishedAt,
+          comments: item.comments || [],
+          viewCount: item.viewCount || 0,
+          author: item.author
+            ? { id: item.author._id, name: item.author.name }
+            : undefined,
+          tags: item.tags || [],
+        }));
 
-      if (error) throw error;
-
-      const items: BlogPost[] = (data || []).map((item: any) => ({
-        id: item.id,
-        title: item.title,
-        slug: item.slug,
-        blocks: item.blocks,
-        status: item.status,
-        publishedAt: item.published_at,
-        comments: item.comments || [],
-        viewCount: item.view_count || 0,
-        author: item.author || "Anonymous",
-        tags: item.tags || [],
-      }));
-
-      setBlogs(items);
-      setTotal(count || 0);
+        setBlogs(items);
+        setTotalPages(Math.max(1, data.totalPages || 1));
+      }
     } catch (err) {
       console.error("Error fetching blogs:", err);
     } finally {
@@ -53,15 +58,13 @@ export default function BlogListPage() {
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm p-4">
         <div className="max-w-4xl mx-auto px-4">
           <h1 className="text-2xl font-bold">All Blogs</h1>
           <p className="text-sm text-gray-600">
-            Browse published posts. Most viewed posts are shown first.
+            Browse published posts. Most recent posts are shown first.
           </p>
         </div>
       </header>
@@ -71,6 +74,11 @@ export default function BlogListPage() {
           <div className="text-center py-12">Loading...</div>
         ) : (
           <div className="space-y-4">
+            {blogs.length === 0 && (
+              <p className="text-center text-gray-600 py-12">
+                No published posts yet.
+              </p>
+            )}
             {blogs.map((b) => (
               <article key={b.id} className="bg-white p-4 rounded shadow">
                 <Link
@@ -80,10 +88,15 @@ export default function BlogListPage() {
                   {b.title}
                 </Link>
                 <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
-                  {/* <div className="flex items-center gap-1">
-                    <User className="w-4 h-4" />
-                    {b.author}
-                  </div> */}
+                  {b.author && (
+                    <Link
+                      to={`/author/${b.author.id}`}
+                      className="flex items-center gap-1 hover:text-blue-600"
+                    >
+                      <User className="w-4 h-4" />
+                      {b.author.name}
+                    </Link>
+                  )}
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
                     {b.publishedAt
@@ -94,40 +107,6 @@ export default function BlogListPage() {
                     <Eye className="w-4 h-4" />
                     {b.viewCount || 0} views
                   </div>
-                </div>
-                <div className="mt-2 text-sm text-gray-700 line-clamp-3">
-                  {/* Render a short excerpt from first paragraph block if available */}
-                  {Array.isArray(b.blocks) &&
-                  b.blocks.length > 0 &&
-                  b.blocks[0].content
-                    ? (function getText(blockContent: any) {
-                        try {
-                          // If blockContent is a TipTap JSON doc, extract text from first paragraph
-                          const doc =
-                            blockContent.type === "doc"
-                              ? blockContent
-                              : Array.isArray(blockContent)
-                              ? { type: "doc", content: blockContent }
-                              : null;
-                          if (doc && doc.content && doc.content.length > 0) {
-                            const node = doc.content[0];
-                            if (node.type === "paragraph" && node.content) {
-                              return node.content
-                                .map((t: any) => t.text || "")
-                                .join("");
-                            }
-                            if (node.type === "heading" && node.content) {
-                              return node.content
-                                .map((t: any) => t.text || "")
-                                .join("");
-                            }
-                          }
-                        } catch (e) {
-                          return "";
-                        }
-                        return "";
-                      })(b.blocks[0].content)
-                    : ""}
                 </div>
               </article>
             ))}

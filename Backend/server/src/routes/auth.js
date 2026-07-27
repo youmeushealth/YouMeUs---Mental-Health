@@ -1,7 +1,10 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-import { sendVerificationEmail } from "../utils/email.js";
+import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+} from "../utils/email.js";
 
 const router = express.Router();
 
@@ -141,6 +144,81 @@ router.get("/verify/:token", async (req, res) => {
     });
   } catch (error) {
     console.error("Email verification error:", error);
+    res.status(400).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+});
+
+/* ===============================
+   🟠 Forgot password — send reset email
+================================ */
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    // Respond the same way whether or not the account exists,
+    // so this endpoint can't be used to enumerate registered emails.
+    if (user) {
+      const resetToken = jwt.sign({ email }, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+
+      user.passwordResetToken = resetToken;
+      user.passwordResetExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+      await user.save();
+
+      await sendPasswordResetEmail(email, resetToken);
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "If that email is registered, a reset link has been sent.",
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(400).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+});
+
+/* ===============================
+   🟠 Reset password
+================================ */
+router.post("/reset-password/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findOne({
+      email: decoded.email,
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid or expired reset token",
+      });
+    }
+
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    res.status(200).json({
+      status: "success",
+      message: "Password reset successfully",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
     res.status(400).json({
       status: "error",
       message: error.message,

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, Edit, BarChart3, LogOut, User } from 'lucide-react';
+import { FileText, Edit, BarChart3, LogOut, User, Compass } from 'lucide-react';
 
 export default function Navigation() {
   const { user, logout } = useAuth();
@@ -20,6 +20,14 @@ export default function Navigation() {
           </div>
           
           <div className="flex items-center gap-4">
+            <Link
+              to="/explore"
+              className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              <Compass className="w-4 h-4" />
+              Explore
+            </Link>
+
             {user?.role === 'admin' ? (
               <>
                 <Link

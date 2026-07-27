@@ -1,43 +1,54 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
 import { type BlogPost } from "../types";
-import { Eye, MessageSquare, Calendar } from "lucide-react";
+import { Eye, MessageSquare, Calendar, ArrowLeft } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 export default function AuthorPage() {
-  const { author } = useParams<{ author: string }>();
-  const decodedAuthor = author ? decodeURIComponent(author) : "";
+  const { authorId } = useParams<{ authorId: string }>();
+  const { token } = useAuth();
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
+  const [authorName, setAuthorName] = useState("");
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
 
   useEffect(() => {
     const fetchAuthorBlogs = async () => {
-      if (!decodedAuthor) return;
+      if (!authorId) return;
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("blogs")
-          .select("*")
-          .eq("author", decodedAuthor)
-          .order("published_at", { ascending: false });
+        const response = await fetch(
+          `${BACKEND_URL}/api/blogs?author=${authorId}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token ? `Bearer ${token}` : "",
+            },
+          }
+        );
+        const data = await response.json();
 
-        if (error) throw error;
+        if (data.status === "success") {
+          const mapped: BlogPost[] = data.data.blogs.map((item: any) => ({
+            id: item._id,
+            title: item.title,
+            slug: item.slug,
+            blocks: item.blocks,
+            status: item.status,
+            publishedAt: item.publishedAt,
+            comments: item.comments || [],
+            viewCount: item.viewCount || 0,
+            author: item.author
+              ? { id: item.author._id, name: item.author.name }
+              : undefined,
+            tags: item.tags || [],
+          }));
 
-        const mapped: BlogPost[] = data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          slug: item.slug,
-          blocks: item.blocks,
-          status: item.status,
-          publishedAt: item.published_at,
-          comments: item.comments || [],
-          viewCount: item.view_count || 0,
-          author: item.author || "Anonymous",
-          tags: item.tags || [],
-        }));
-
-        setBlogs(mapped);
+          setBlogs(mapped);
+          setAuthorName(mapped[0]?.author?.name || "Unknown Author");
+        }
       } catch (err) {
         console.error("Error fetching author blogs:", err);
       } finally {
@@ -47,13 +58,13 @@ export default function AuthorPage() {
 
     fetchAuthorBlogs();
 
-    const key = `follow_${decodedAuthor}`;
+    const key = `follow_${authorId}`;
     const stored = localStorage.getItem(key);
     setFollowing(stored === "true");
-  }, [decodedAuthor]);
+  }, [authorId, token]);
 
   const toggleFollow = () => {
-    const key = `follow_${decodedAuthor}`;
+    const key = `follow_${authorId}`;
     const next = !following;
     setFollowing(next);
     try {
@@ -80,8 +91,8 @@ export default function AuthorPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm p-4">
-        <Link to="/dashboard" className="flex items-center gap-2 text-blue-600">
-          ← Back to Dashboard
+        <Link to="/blogs" className="flex items-center gap-2 text-blue-600">
+          <ArrowLeft className="w-5 h-5" /> Back to Dashboard
         </Link>
       </header>
 
@@ -89,16 +100,14 @@ export default function AuthorPage() {
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center gap-4">
             <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl">
-              {decodedAuthor
+              {authorName
                 .split(" ")
                 .map((s) => s[0])
                 .slice(0, 2)
                 .join("")}
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold">
-                {decodedAuthor || "Unknown"}
-              </h1>
+              <h1 className="text-2xl font-bold">{authorName}</h1>
               <p className="text-sm text-gray-600 mt-1">
                 {blogs.length} posts · {totalViews} views · {totalComments}{" "}
                 comments
@@ -120,7 +129,7 @@ export default function AuthorPage() {
         <section className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2 bg-white p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold mb-4">
-              Posts by {decodedAuthor}
+              Posts by {authorName}
             </h2>
             {blogs.length === 0 ? (
               <p className="text-gray-600">
@@ -195,15 +204,6 @@ export default function AuthorPage() {
                   ))}
               </ol>
             )}
-
-            <div className="mt-6 border-t pt-4">
-              <h4 className="font-medium mb-2">About</h4>
-              <p className="text-sm text-gray-600">
-                This author profile is generated from post metadata. For richer
-                profiles, consider adding a dedicated "authors" table in the
-                database with bio, avatar, and contact info.
-              </p>
-            </div>
           </aside>
         </section>
       </main>
