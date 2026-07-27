@@ -9,6 +9,10 @@ import { useAuth } from "./contexts/AuthContext";
 import Navigation from "./components/Navigation";
 import DashboardPage from "./pages/DashboardPage";
 import GoogleAuthSuccess from "./pages/GoogleAuthSuccess";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import AuthorPage from "./pages/AuthorPage";
+import BlogListPage from "./pages/BlogListPage";
 
 // Protected Route Component
 const ProtectedRoute = ({
@@ -64,6 +68,8 @@ function App() {
         />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
         <Route path="/google-auth-success" element={<GoogleAuthSuccess />} />
 
         {/* Protected User Routes */}
@@ -80,6 +86,22 @@ function App() {
           element={
             <ProtectedRoute>
               <BlogViewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/author/:authorId"
+          element={
+            <ProtectedRoute>
+              <AuthorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/explore"
+          element={
+            <ProtectedRoute>
+              <BlogListPage />
             </ProtectedRoute>
           }
         />
