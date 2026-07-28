@@ -34,6 +34,12 @@ const userSchema = new mongoose.Schema({
   verificationTokenExpires: Date,
   passwordResetToken: String,
   passwordResetExpires: Date,
+  followers: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
   createdAt: {
     type: Date,
     default: Date.now,
@@ -50,6 +56,22 @@ userSchema.pre("save", async function (next) {
 // Compare password method
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// Toggle follow/unfollow method
+userSchema.methods.toggleFollow = async function (followerId) {
+  const index = this.followers.findIndex(
+    (id) => id.toString() === followerId.toString()
+  );
+
+  if (index > -1) {
+    this.followers.splice(index, 1);
+  } else {
+    this.followers.push(followerId);
+  }
+
+  await this.save();
+  return this.followers.length;
 };
 
 const User = mongoose.model("User", userSchema);
