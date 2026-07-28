@@ -12,6 +12,7 @@ import googleAuthRoutes from "./routes/googleAuth.js";
 import seoRoutes from "./routes/seo.js";
 import { protect } from "./middleware/auth.js";
 import mediaRoutes from "./routes/mediaRoutes.js";
+import userRoutes from "./routes/users.js";
 
 const app = express();
 
@@ -59,6 +60,7 @@ app.use("/api/auth/google", googleAuthRoutes);
 app.use("/api/blogs", protect, blogRoutes);
 app.use("/api/comments", protect, commentRoutes);
 app.use("/api/media", protect, mediaRoutes);
+app.use("/api/users", protect, userRoutes);
 app.use("/", seoRoutes);
 
 // Error handling middleware

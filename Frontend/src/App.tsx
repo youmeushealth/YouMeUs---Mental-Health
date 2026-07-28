@@ -7,7 +7,6 @@ import AdminDashboard from "./pages/AdminDashboard";
 import UserDashboard from "./pages/UserDashboard";
 import { useAuth } from "./contexts/AuthContext";
 import Navigation from "./components/Navigation";
-import DashboardPage from "./pages/DashboardPage";
 import GoogleAuthSuccess from "./pages/GoogleAuthSuccess";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
@@ -115,7 +114,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* <Route path="/dashboard" element={<DashboardPage />} /> */}
         <Route
           path="/editor"
           element={

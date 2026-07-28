@@ -8,11 +8,13 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 export default function AuthorPage() {
   const { authorId } = useParams<{ authorId: string }>();
-  const { token } = useAuth();
+  const { user, token } = useAuth();
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [authorName, setAuthorName] = useState("");
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
     const fetchAuthorBlogs = async () => {
@@ -56,23 +58,55 @@ export default function AuthorPage() {
       }
     };
 
-    fetchAuthorBlogs();
+    const fetchFollowStatus = async () => {
+      if (!authorId || !token) return;
+      try {
+        const response = await fetch(
+          `${BACKEND_URL}/api/users/${authorId}/follow-status`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        const data = await response.json();
+        if (data.status === "success") {
+          setFollowing(data.data.following);
+          setFollowerCount(data.data.followerCount);
+        }
+      } catch (err) {
+        console.error("Error fetching follow status:", err);
+      }
+    };
 
-    const key = `follow_${authorId}`;
-    const stored = localStorage.getItem(key);
-    setFollowing(stored === "true");
+    fetchAuthorBlogs();
+    fetchFollowStatus();
   }, [authorId, token]);
 
-  const toggleFollow = () => {
-    const key = `follow_${authorId}`;
-    const next = !following;
-    setFollowing(next);
+  const toggleFollow = async () => {
+    if (!authorId || !token || followLoading) return;
+    setFollowLoading(true);
     try {
-      localStorage.setItem(key, next ? "true" : "false");
-    } catch (e) {
-      console.error("Failed to persist follow state", e);
+      const response = await fetch(
+        `${BACKEND_URL}/api/users/${authorId}/follow`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const data = await response.json();
+      if (response.ok && data.status === "success") {
+        setFollowing(data.data.following);
+        setFollowerCount(data.data.followerCount);
+      } else {
+        alert(data.message || "Failed to update follow status");
+      }
+    } catch (err) {
+      console.error("Error toggling follow:", err);
+    } finally {
+      setFollowLoading(false);
     }
   };
+
+  const isOwnProfile = user?.id === authorId;
 
   if (loading)
     return (
@@ -92,7 +126,7 @@ export default function AuthorPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm p-4">
         <Link to="/blogs" className="flex items-center gap-2 text-blue-600">
-          <ArrowLeft className="w-5 h-5" /> Back to Dashboard
+          <ArrowLeft className="w-5 h-5" /> Back to Blogs
         </Link>
       </header>
 
@@ -109,20 +143,23 @@ export default function AuthorPage() {
             <div className="flex-1">
               <h1 className="text-2xl font-bold">{authorName}</h1>
               <p className="text-sm text-gray-600 mt-1">
-                {blogs.length} posts · {totalViews} views · {totalComments}{" "}
-                comments
+                {blogs.length} posts · {followerCount} followers ·{" "}
+                {totalViews} views · {totalComments} comments
               </p>
             </div>
-            <div>
-              <button
-                onClick={toggleFollow}
-                className={`px-4 py-2 rounded-md text-white ${
-                  following ? "bg-gray-600" : "bg-blue-600 hover:bg-blue-700"
-                }`}
-              >
-                {following ? "Following" : "Follow"}
-              </button>
-            </div>
+            {!isOwnProfile && (
+              <div>
+                <button
+                  onClick={toggleFollow}
+                  disabled={followLoading}
+                  className={`px-4 py-2 rounded-md text-white disabled:opacity-50 ${
+                    following ? "bg-gray-600" : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {following ? "Following" : "Follow"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

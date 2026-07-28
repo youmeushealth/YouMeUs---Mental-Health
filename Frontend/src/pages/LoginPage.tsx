@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import GoogleLoginButton from "../components/GoogleLoginButton";
 
 export default function LoginPage() {
@@ -27,12 +27,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white shadow-sm p-4">
-        <Link to="/" className="flex items-center gap-2 text-blue-600">
-          <ArrowLeft className="w-5 h-5" /> Back to Home
-        </Link>
-      </header>
-
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
           <h1 className="text-2xl font-bold text-center mb-6">Login</h1>

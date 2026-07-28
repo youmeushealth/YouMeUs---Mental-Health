@@ -199,7 +199,7 @@ export default function BlogViewPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm p-4">
         <Link to="/blogs" className="flex items-center gap-2 text-blue-600">
-          <ArrowLeft className="w-5 h-5" /> Back to Dashboard
+          <ArrowLeft className="w-5 h-5" /> Back to Blogs
         </Link>
       </header>
 
